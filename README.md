@@ -2,6 +2,7 @@
 * [General info](#general-info)
 * [Technologies](#technologies)
 * [Setup](#setup)
+* [Endpoints](#Endpoints)
 
 ## General info
 This project was created for Opora back-end challenge
@@ -23,3 +24,9 @@ $ git clone https://github.com/jgabbayj/oporachallenge.git
 $ cd oporachallenge
 $ docker-compose up
 ```
+
+## Endpoints
+* /drivers/byseason?season=[year]
+* /seasons/
+* /races/bydriver?name=[name] 
+* /races/bydriver?id=[id]
