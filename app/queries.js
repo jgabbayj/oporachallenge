@@ -37,19 +37,21 @@ function getDriversBySeason(request, response){
 
 // Returns a list of seasons with the top 3 drivers in each season
 function getDriversPerSeason(request,response){
-	var query = "SELECT year, seasonurl as url, json_agg(json_build_object('driver',drivers.*,'points',total_points)) as top_drivers "+
-	"FROM (SELECT year, seasons.url AS seasonurl, driver_id, SUM(results.points) as total_points, "+
-	"RANK() OVER(PARTITION BY year ORDER BY SUM(results.points) DESC) rank "+
+	var query = "SELECT year, seasonurl, json_agg(json_build_object('driver',drivers.*,'points',total_points)) as top_drivers "+
+	"FROM "+
+	"(SELECT year, seasons.url as seasonurl, driver_id, SUM(t2.points) as total_points, RANK() OVER(PARTITION BY year ORDER BY SUM(points) DESC) rank "+
 	"FROM seasons "+
-	"INNER JOIN races USING(year) "+
-	"LEFT JOIN results USING(race_id) "+
-	"INNER JOIN drivers USING(driver_id) "+
-	"GROUP BY driver_id,year "+
-	"ORDER BY year DESC, total_points DESC) as res "+
-	"LEFT JOIN drivers USING(driver_id) "+
-	"WHERE RANK<4 "+
+	"INNER JOIN "+
+	"(SELECT race_id, year from races) as t1 USING(year) "+
+	"INNER JOIN "+
+	"(SELECT driver_id, race_id, points from results) as t2 USING(race_id) "+
+	"GROUP BY year,driver_id "+
+	"ORDER BY year DESC, total_points DESC) as t "+
+	"LEFT JOIN "+
+	"drivers USING(driver_id) "+
+	"WHERE rank<4 "+
 	"GROUP BY year, seasonurl "+
-	"ORDER BY year DESC;"
+	"ORDER BY year DESC"
 	pool.query(query,(error,results)=>{
 		if(error)
 			throw error
@@ -63,38 +65,39 @@ function getDriversPerSeason(request,response){
 function getDriverRacesByIdOrName(request,response){
 	var id = request.query.id;
 	var name = request.query.name;
-
-	var query = "SELECT drivers.*, json_agg(json_build_object('race_id',race_id,'average_lap_time',avg_lap_time,'fastest_lap_time'"+
-	",min_lap_time,'slowest_lap_time',max_lap_time,'pit_stops',pit_stops_count,'fastest_pit_stop',min_pit_stop,"+
-	"'slowest_pit_stop',max_pit_stop,'circut_name',circut_name,'points',results_points,'position',results_position)) as races "+
-	"FROM drivers "+
-	"INNER JOIN "+
-	"(SELECT race_id, driver_id, MAX(pit_stops.stop) as pit_stops_count, MAX(pit_stops.time) max_pit_stop, MIN(pit_stops.time) min_pit_stop,"+
-	"AVG(lap_times.time) avg_lap_time, MAX(lap_times.time) max_lap_time, MIN(lap_times.time) min_lap_time, circuits.name as circut_name,"+
-	"results.points as results_points,results.position as results_position "+
-	"FROM results "+
-	"LEFT JOIN races USING(race_id) "+
-	"LEFT JOIN pit_stops USING(driver_id,race_id) "+
-	"LEFT JOIN lap_times USING(driver_id,race_id) "+
-	"LEFT JOIN circuits USING(circuit_id) "+
-	"GROUP BY race_id, circuits.name, results.points, results.position, races.date, driver_id "+
-	"ORDER BY races.date DESC) AS t1 USING(driver_id) ";
-	
+		
 	var param;
-	
+	var q;
 	if(id){
-		query+="WHERE driver_id = $1 ";
+		q="WHERE driver_id = $1 ";
 		param = id;
 	}
 	else if(name){
-		query+="WHERE drivers.driver_ref = $1 ";
+		q="WHERE driver_ref = $1 ";
 		param=name;
 	}
 	else{
 		response.status(400).json({msg:'Name or ID must be present'});
 		return
 	}
-	query+="GROUP BY drivers.driver_id";
+	
+	var query = "SELECT drivers.*, json_agg(json_build_object('race_id',race_id,'date',t4.date,'average_lap_time',avg_lap_time,'fastest_lap_time',fastest_lap_time,'slowest_lap_time',slowest_lap_time,'pit_stops',pit_stops_count,"+
+	"'fastest_pit_stop',fastest_pit_stop,'slowest_pit_stop',slowest_pit_stop,'circuit_name',circuit_name,'points',t1.points,'position',t1.position)) as races "+
+	"FROM drivers "+
+	"INNER JOIN "+
+	"(SELECT race_id, driver_id, points,position FROM results) as t1 USING(driver_id) "+
+	"LEFT JOIN "+
+	"(SELECT race_id, driver_id, COUNT(stop) as pit_stops_count, MAX(time) as slowest_pit_stop, MIN(time) as fastest_pit_stop FROM pit_stops GROUP BY race_id,driver_id) as t2 USING (race_id,driver_id) "+
+	"LEFT JOIN "+
+	"(SELECT race_id, driver_id, AVG(time) as avg_lap_time, MAX(time) slowest_lap_time, MIN(time) fastest_lap_time FROM lap_times GROUP BY race_id,driver_id) as t3 USING(driver_id,race_id) "+
+	"LEFT JOIN "+
+	"(SELECT race_id, circuit_id,date from races) as t4 USING (race_id) "+
+	"LEFT JOIN "+
+	"(SELECT circuit_id, name as circuit_name FROM circuits) as t5 USING(circuit_id) "+
+	q+
+	"GROUP BY driver_id "
+	
+	
 	pool.query(query,[param],(error,results)=>{
 	if(error){
 		if(error.code == "22P02")
