@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres
+    image: postgres:13.3-alpine3.14
     container_name: formulaone-db
     environment:
       - POSTGRES_USER=postgres

@@ -78,7 +78,7 @@ function getDriverRacesByIdOrName(request,response){
 	"LEFT JOIN lap_times USING(driver_id,race_id) "+
 	"LEFT JOIN circuits USING(circuit_id) "+
 	"GROUP BY race_id, circuits.name, results.points, results.position, races.date, driver_id "+
-	"ORDER BY races.date) AS t1 USING(driver_id) ";
+	"ORDER BY races.date DESC) AS t1 USING(driver_id) ";
 	
 	var param;
 	
