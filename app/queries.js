@@ -81,8 +81,8 @@ function getDriverRacesByIdOrName(request,response){
 		return
 	}
 	
-	var query = "SELECT drivers.*, json_agg(json_build_object('race_id',race_id,'date',t4.date,'average_lap_time',avg_lap_time,'fastest_lap_time',fastest_lap_time,'slowest_lap_time',slowest_lap_time,'pit_stops',pit_stops_count,"+
-	"'fastest_pit_stop',fastest_pit_stop,'slowest_pit_stop',slowest_pit_stop,'circuit_name',circuit_name,'points',t1.points,'position',t1.position)) as races "+
+	var query = "SELECT drivers.*, json_agg(json_build_object('race_id',race_id,'date',date,'average_lap_time',avg_lap_time,'fastest_lap_time',fastest_lap_time,'slowest_lap_time',slowest_lap_time,'pit_stops',pit_stops_count,"+
+	"'fastest_pit_stop',fastest_pit_stop,'slowest_pit_stop',slowest_pit_stop,'circuit_name',circuit_name,'points',t1.points,'position',t1.position) ORDER BY date DESC) as races "+
 	"FROM drivers "+
 	"INNER JOIN "+
 	"(SELECT race_id, driver_id, points,position FROM results) as t1 USING(driver_id) "+
